@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Server port="8005" shutdown="SHUTDOWN">
+
+  <!-- Listener Components -->
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <Listener className="org.apache.catalina.core.JasperListener" />
+
+  <!-- Global Resources -->
+  <GlobalNamingResources>
+    <Resource name="UserDatabase" auth="Container"
+              type="org.apache.catalina.UserDatabase"
+              description="User database that can be updated and saved"
+              factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+              pathname="conf/tomcat-users.xml" />
+  </GlobalNamingResources>
+
+  <Service name="Catalina">
+
+    <!-- TOMCAT-001: Debug enabled -->
+    <Engine name="Catalina" defaultHost="localhost">
+      <Host name="localhost" appBase="webapps" unpackWARs="true" autoDeploy="true">
+        <Context docBase="myapp" debug="1" reloadable="true" />
+
+        <!-- TOMCAT-002: Manager app present -->
+        <Context privileged="true" antiResourceLocking="false"
+                 docBase="${catalina.home}/webapps/manager"
+                 debug="0" />
+      </Host>
+    </Engine>
+
+    <!-- TOMCAT-003: Insecure HTTP on 8080 without redirect -->
+    <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443"
+               server="Apache Tomcat/9.0.65" />
+
+    <!-- TOMCAT-005: Weak SSL/TLS configuration -->
+    <Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
+               maxThreads="150" SSLEnabled="true" scheme="https" secure="true"
+               clientAuth="false" sslProtocol="TLS"
+               sslEnabledProtocols="TLSv1,TLSv1.1,TLSv1.2"
+               keystoreFile="conf/keystore"
+               keystorePass="changeit"
+               ciphers="TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA" />
+
+    <!-- TOMCAT-007: AJP Connector exposed on all interfaces -->
+    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+
+    <!-- TOMCAT-008: CORS Filter allowing all origins (*) -->
+    <Filter>
+      <filter-name>CorsFilter</filter-name>
+      <filter-class>org.apache.catalina.filters.CorsFilter</filter-class>
+      <init-param>
+        <param-name>cors.allowed.origins</param-name>
+        <param-value>*</param-value>
+      </init-param>
+      <init-param>
+        <param-name>cors.allowed.methods</param-name>
+        <param-value>GET,POST,HEAD,OPTIONS</param-value>
+      </init-param>
+    </Filter>
+
+    <!-- TOMCAT-011: RemoteIpValve without proper proxy config -->
+    <Valve className="org.apache.catalina.valves.RemoteIpValve"
+           internalProxies=".*"
+           remoteIpHeader="x-forwarded-for"
+           protocolHeader="x-forwarded-proto" />
+
+    <!-- TOMCAT-013: Persistent session manager -->
+    <Manager className="org.apache.catalina.session.PersistentManager"
+             saveOnRestart="true">
+      <Store className="org.apache.catalina.session.FileStore"/>
+    </Manager>
+
+    <!-- TOMCAT-014: Context with risky settings -->
+    <Context allowLinking="true" crossContext="true" />
+
+    <!-- TOMCAT-015: JMX Remote Listener enabled -->
+    <Listener className="org.apache.catalina.mbeans.JmxRemoteLifecycleListener"
+              rmiRegistryPortPlatform="9998"
+              rmiServerPortPlatform="9999" />
+
+  </Service>
+</Server>
