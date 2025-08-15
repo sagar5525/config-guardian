@@ -1,0 +1,176 @@
+# rules/httpd.conf.yaml
+
+rules:
+  - id: "HTTPD-001"
+    name: "ServerSignature Enabled"
+    description: "Apache reveals version and OS in error pages."
+    type: "regex"
+    regex: 'ServerSignature\s+On'
+    severity: "Medium"
+    remediation: "Set ServerSignature Off"
+    reference: "https://httpd.apache.org/docs/2.4/mod/core.html#serversignature"
+
+  - id: "HTTPD-002"
+    name: "Indexes Allowed"
+    description: "Directory listing enabled via Options Indexes."
+    type: "regex"
+    regex: 'Options\s+.*Indexes'
+    severity: "Medium"
+    remediation: "Use 'Options -Indexes' to disable directory listing."
+    reference: "https://httpd.apache.org/docs/2.4/mod/core.html#options"
+
+  - id: "HTTPD-003"
+    name: "ServerTokens Full"
+    description: "Server header exposes full Apache version and OS."
+    type: "regex"
+    regex: 'ServerTokens\s+Full'
+    severity: "Low"
+    remediation: "Set ServerTokens Prod to show only 'Apache'."
+    reference: "https://httpd.apache.org/docs/2.4/mod/core.html#servertokens"
+
+  - id: "HTTPD-004"
+    name: "SSLv3 or TLSv1 Enabled"
+    description: "Outdated SSL/TLS protocols enabled."
+    type: "regex"
+    regex: 'SSLProtocol'
+    value: 'SSLv3|TLSv1'
+    severity: "High"
+    remediation: "Use SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1"
+    reference: "https://httpd.apache.org/docs/2.4/mod/mod_ssl.html#sslprotocol"
+
+  - id: "HTTPD-005"
+    name: "HSTS Not Configured"
+    description: "HTTP Strict Transport Security not enabled."
+    type: "regex"
+    regex: 'Header\s+set\s+Strict-Transport-Security'
+    condition: "not(exists)"
+    severity: "Medium"
+    remediation: "Add: Header always set Strict-Transport-Security 'max-age=31536000'"
+    reference: "https://owasp.org/www-project-secure-headers/#hsts"
+
+  # --- New Rules Based on Apache HTTPD Security Tips ---
+
+  - id: "HTTPD-SEC-001"
+    name: "Default Access Not Denied"
+    description: "Access to the entire filesystem is allowed by default, which is a major security risk."
+    type: "regex"
+    regex: '<Directory\s+"/">'
+    value: 'Require all granted'
+    severity: "High"
+    remediation: "Ensure a '<Directory \"/\"> Require all denied </Directory>' block exists to forbid default access to filesystem locations. Then explicitly allow access only to intended directories."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#serverroot"
+
+  - id: "HTTPD-SEC-002"
+    name: "Root UserDir Enabled"
+    description: "UserDir is enabled for the root user, potentially allowing access to the entire filesystem."
+    type: "regex"
+    regex: 'UserDir\s+(?!disabled\s+root)'
+    severity: "High"
+    remediation: "Add 'UserDir disabled root' to your configuration to prevent access to root's home directory via ~root."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#serverroot"
+
+  - id: "HTTPD-SEC-003"
+    name: "Unprotected .ht* Files"
+    description: "Files like .htpasswd might be accessible if not explicitly denied."
+    type: "regex"
+    regex: '<Files\s+"\\.ht\\*?">'
+    condition: "not(exists)"
+    severity: "High"
+    remediation: "Ensure a '<Files \".ht*\"> Require all denied </Files>' block exists to prevent access to sensitive configuration files."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#serverroot"
+
+  - id: "HTTPD-SEC-004"
+    name: "AllowOverride Not Disabled Globally"
+    description: "AllowOverride is not set to None globally, allowing .htaccess files to override security settings."
+    type: "regex"
+    regex: '<Directory\s+"/">'
+    value: 'AllowOverride None'
+    severity: "Medium"
+    remediation: "Set 'AllowOverride None' within a '<Directory \"/\">' block to prevent the use of .htaccess files which can override security features. Note: This is the default since Apache 2.3.9."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#htaccess"
+
+  - id: "HTTPD-SEC-005"
+    name: "Includes or ExecCGI Enabled Globally"
+    description: "Server-side includes (Includes/IncludesNOEXEC) or CGI execution (ExecCGI) might be enabled globally, increasing risk."
+    type: "regex"
+    regex: '<Directory\s+"/">'
+    value: 'Includes|ExecCGI'
+    severity: "Medium"
+    remediation: "Review global Directory blocks to ensure Includes, IncludesNOEXEC, and ExecCGI are not enabled unless strictly necessary and properly secured in specific directories."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#ssi"
+
+  - id: "HTTPD-SEC-006"
+    name: "Script Aliasing to Root Directory"
+    description: "ScriptAlias or ScriptAliasMatch might be pointing to the root filesystem (/), posing a security risk."
+    type: "regex"
+    regex: 'ScriptAlias.*"/\s*"' # Matches ScriptAlias / "/"
+    severity: "High"
+    remediation: "Ensure ScriptAlias directives point to specific, secured directories outside the document root (e.g., ScriptAlias /cgi-bin/ \"/usr/local/apache/cgi-bin/\"). Avoid aliasing to /."
+    reference: "https://httpd.apache.org/docs/2.4/mod/mod_alias.html#scriptalias"
+
+  - id: "HTTPD-SEC-007"
+    name: "Unsafe SSI Configuration"
+    description: "SSI is enabled for .html/.htm files or 'Includes' (instead of 'IncludesNOEXEC') is used, increasing risk of command execution."
+    type: "regex"
+    regex: 'AddType.*server-parsed.*\\.s?html?$|Options.*Includes(?!NOEXEC)'
+    severity: "Medium"
+    remediation: "Use a specific extension like .shtml for SSI files. If SSI is used, prefer 'IncludesNOEXEC' over 'Includes' to disable the exec cmd element. Review AddType directives for server-parsed content."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#ssi"
+
+  - id: "HTTPD-SEC-008"
+    name: "KeepAlive Disabled or Misconfigured"
+    description: "KeepAlive is disabled or KeepAliveTimeout is too high, potentially impacting performance or making DoS attacks easier."
+    type: "regex"
+    regex: 'KeepAlive\s+Off|KeepAliveTimeout\s+(6[1-9]|[7-9]\\d{1,}|[1-9]\\d{2,})' # Off or > 60s
+    severity: "Low"
+    remediation: "Consider enabling KeepAlive for performance. If under DoS attack, consider lowering KeepAliveTimeout (e.g., to 5-15 seconds) or disabling KeepAlive. Default is usually On with 5s timeout."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#dos"
+
+  - id: "HTTPD-SEC-009"
+    name: "Timeout Value Too High"
+    description: "The Timeout directive is set to a high value, which can make the server more vulnerable to DoS attacks."
+    type: "regex"
+    regex: 'Timeout\s+(6[1-9]|[7-9]\\d{1,}|[1-9]\\d{2,})' # > 60 seconds
+    severity: "Low"
+    remediation: "Consider lowering the Timeout directive on sites subject to DoS attacks. Setting it to a few seconds (e.g., 10-30) may be appropriate, but be cautious as it's used for multiple operations."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#dos"
+
+  - id: "HTTPD-SEC-010"
+    name: "Request Limits Not Configured"
+    description: "Limits for request body, fields, etc., are not explicitly set, potentially making the server vulnerable to resource exhaustion attacks."
+    type: "regex"
+    regex: 'LimitRequestBody|LimitRequestFields|LimitRequestFieldSize|LimitRequestLine'
+    condition: "not(exists)"
+    severity: "Low"
+    remediation: "Carefully configure LimitRequestBody, LimitRequestFields, LimitRequestFieldSize, and LimitRequestLine directives to limit resource consumption triggered by client input."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#dos"
+
+  - id: "HTTPD-SEC-011"
+    name: "MaxRequestWorkers Not Explicitly Set"
+    description: "The MaxRequestWorkers directive is not explicitly configured, which might lead to resource exhaustion."
+    type: "regex"
+    regex: 'MaxRequestWorkers'
+    condition: "not(exists)"
+    severity: "Low"
+    remediation: "Explicitly set the MaxRequestWorkers directive to allow the server to handle the maximum number of simultaneous connections without running out of resources. Consider the event MPM for better handling."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#dos"
+
+  - id: "HTTPD-SEC-012"
+    name: "Server Root or Binary Permissions Incorrect"
+    description: "This check cannot be performed on httpd.conf itself, but the document stresses the importance of securing the server root and binary."
+    type: "regex"
+    regex: '#SECURITY_CHECK_PLACEHOLDER#'
+    condition: "not(exists)"
+    severity: "Info"
+    remediation: "(Not detectable in httpd.conf) Ensure the ServerRoot directory and the httpd binary are owned by root, not writable by non-root users, and have appropriate permissions (e.g., 755 for dirs/bin, 511 for binary)."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#serverroot"
+
+  - id: "HTTPD-SEC-013"
+    name: "Logs Directory Permissions"
+    description: "This check cannot be performed on httpd.conf itself, but the document stresses the importance of securing log directories."
+    type: "regex"
+    regex: '#SECURITY_CHECK_PLACEHOLDER#'
+    condition: "not(exists)"
+    severity: "Info"
+    remediation: "(Not detectable in httpd.conf) Ensure the logs directory is owned by the appropriate user (often root or a dedicated log user), not writable by the Apache user, and has restricted permissions."
+    reference: "https://httpd.apache.org/docs/2.4/misc/security_tips.html#serverroot"
