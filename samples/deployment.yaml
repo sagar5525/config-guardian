@@ -1,0 +1,35 @@
+# samples/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+        securityContext:
+          runAsUser: 0 # Violates K8S-001
+          privileged: true # Violates K8S-002
+          allowPrivilegeEscalation: true # Violates K8S-003 (though default, explicit check)
+          capabilities:
+            add: ["NET_ADMIN"] # Violates K8S-004
+        imagePullPolicy: IfNotPresent # Violates K8S-006 if using :latest implicitly
+        # Missing liveness/readiness probes # Violates K8S-007
+      volumes:
+        - name: test-volume
+          hostPath: # Violates K8S-005
+            path: /data
+            type: Directory
