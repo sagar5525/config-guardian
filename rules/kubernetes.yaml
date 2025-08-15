@@ -1,0 +1,76 @@
+# rules/kubernetes.yaml
+rules:
+  - id: "K8S-001"
+    name: "Container Running as Root User"
+    description: "A container is configured to run as the root user (UID 0), increasing risk."
+    type: "key"
+    # Path to securityContext.runAsUser in container spec
+    key: "spec.template.spec.containers.*.securityContext.runAsUser"
+    value: 0
+    severity: "High"
+    remediation: "Set 'securityContext.runAsUser' to a non-root UID (e.g., 1000) in the container specification."
+    reference: "https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted"
+
+  - id: "K8S-002"
+    name: "Privileged Container"
+    description: "A container is granted privileged access to the host, breaking isolation."
+    type: "key"
+    key: "spec.template.spec.containers.*.securityContext.privileged"
+    value: true
+    severity: "Critical"
+    remediation: "Remove 'securityContext.privileged: true'. Grant only necessary capabilities using 'capabilities.add' if absolutely required."
+    reference: "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/"
+
+  - id: "K8S-003"
+    name: "Container Allows Privilege Escalation"
+    description: "A container allows privilege escalation, which can bypass user restrictions."
+    type: "key"
+    key: "spec.template.spec.containers.*.securityContext.allowPrivilegeEscalation"
+    value: true # Default is true if not set
+    severity: "High"
+    remediation: "Set 'securityContext.allowPrivilegeEscalation: false' explicitly in the container specification."
+    reference: "https://kubernetes.io/docs/tasks/configure-pod-container/security-context/"
+
+  - id: "K8S-004"
+    name: "Insecure Capabilities Added"
+    description: "Dangerous Linux capabilities (e.g., NET_ADMIN, SYS_ADMIN) are added to the container."
+    type: "key"
+    # Checks for specific capabilities in the 'add' list
+    key: "spec.template.spec.containers.*.securityContext.capabilities.add"
+    value: "NET_ADMIN" # Example, can check for others
+    severity: "High"
+    remediation: "Review the capabilities added. Remove unnecessary or dangerous ones like NET_ADMIN, SYS_ADMIN."
+    reference: "https://man7.org/linux/man-pages/man7/capabilities.7.html"
+
+  - id: "K8S-005"
+    name: "HostPath Volume Mounted"
+    description: "A HostPath volume is mounted, granting access to the host filesystem."
+    type: "key"
+    key: "spec.template.spec.volumes.*.hostPath"
+    condition: "exists"
+    severity: "High"
+    remediation: "Avoid using HostPath volumes in production. Use PersistentVolumes or other volume types designed for Kubernetes."
+    reference: "https://kubernetes.io/docs/concepts/storage/volumes/#hostpath"
+
+  - id: "K8S-006"
+    name: "Image Pull Policy Not Always Pull"
+    description: "Image pull policy is not set to 'Always', risking stale images if tags like 'latest' are used."
+    type: "key"
+    key: "spec.template.spec.containers.*.imagePullPolicy"
+    value: "IfNotPresent" # Or "Never"
+    severity: "Medium"
+    remediation: "Set 'imagePullPolicy: Always' for images using mutable tags like 'latest' to ensure the latest version is always pulled."
+    reference: "https://kubernetes.io/docs/concepts/containers/images/#image-pull-policy"
+
+  - id: "K8S-007"
+    name: "Liveness/Readiness Probes Not Defined"
+    description: "Liveness or readiness probes are missing, impacting failure detection and traffic routing."
+    type: "key"
+    # Check if either probe exists. This is tricky with 'not(exists)' on a complex path.
+    # Better to check for the existence of the probes keys.
+    # Let's check if livenessProbe key exists for any container.
+    key: "spec.template.spec.containers.*.livenessProbe"
+    condition: "not(exists)"
+    severity: "Medium"
+    remediation: "Define liveness and readiness probes for your containers to enable Kubernetes to manage their health."
+    reference: "https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/"
