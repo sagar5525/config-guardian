@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>VulnerableApp</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.example.vulnerable</string>
+
+	<!-- PLIST-001: ATS disabled -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+	<!-- PLIST-002: Keychain sharing -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.example.vulnerable</string>
+	</array>
+
+	<!-- PLIST-003: File sharing enabled -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+
+	<!-- PLIST-004: Associated domains -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:example.com</string>
+	</array>
+</dict>
+</plist>
