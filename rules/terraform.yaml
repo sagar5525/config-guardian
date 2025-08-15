@@ -1,0 +1,85 @@
+# rules/terraform.yaml
+rules:
+  - id: "TF-001"
+    name: "S3 Bucket Public Access Allowed"
+    description: "An S3 bucket allows public read or write access."
+    type: "key"
+    key: "resource.*.aws_s3_bucket.*.acl"
+    value: "public-read"
+    severity: "High"
+    remediation: "Set the 'acl' argument to a private ACL like 'private' or remove it to use the default. Use S3 Bucket Policies for fine-grained access control."
+    reference: "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket"
+
+  - id: "TF-002"
+    name: "S3 Bucket Versioning Disabled"
+    description: "S3 bucket versioning is not enabled, risking data loss."
+    type: "key"
+    key: "resource.*.aws_s3_bucket.*.versioning.enabled"
+    value: false
+    severity: "Medium"
+    remediation: "Enable versioning by setting 'versioning.enabled = true' in the aws_s3_bucket resource."
+    reference: "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket#enable-versioning"
+
+  - id: "TF-003"
+    name: "Security Group Allows All Ingress"
+    description: "A security group rule allows ingress from any IP address (0.0.0.0/0)."
+    type: "key"
+    key: "resource.*.aws_security_group.*.ingress.*.cidr_blocks"
+    value: "0.0.0.0/0"
+    severity: "High"
+    remediation: "Restrict the 'cidr_blocks' in the ingress rule to specific, trusted IP addresses or use 'security_groups' to reference other security groups."
+    reference: "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group"
+
+  - id: "TF-004"
+    name: "RDS Instance Not Configured for Multi-AZ"
+    description: "RDS instance is not configured for Multi-AZ deployment, impacting availability."
+    type: "key"
+    key: "resource.*.aws_db_instance.*.multi_az"
+    value: false
+    severity: "Medium"
+    remediation: "For production databases, set 'multi_az = true' in the aws_db_instance resource."
+    reference: "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#multi_az"
+
+  - id: "TF-005"
+    name: "EC2 Instance Uses Default Security Group"
+    description: "EC2 instance is associated with the default security group, which might be overly permissive."
+    type: "key"
+    key: "resource.*.aws_instance.*.vpc_security_group_ids"
+    condition: "not(exists)"
+    severity: "Medium"
+    remediation: "Explicitly associate the EC2 instance with custom security groups that have minimal required rules."
+    reference: "https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/instance#vpc_security_group_ids"
+
+  - id: "TF-006"
+    name: "IAM Policy Allows '*' Action"
+    description: "IAM policy document grants overly broad permissions using '*'."
+    type: "key"
+    key: "resource.*.aws_iam_policy.*.policy"
+    # Using a literal scalar for the regex pattern to avoid YAML parsing issues
+    value: |
+      "Action":\s*"\*"
+    severity: "High"
+    remediation: "Define specific actions in the IAM policy instead of using '*'. Follow the principle of least privilege."
+    reference: "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege"
+
+  - id: "TF-007"
+    name: "Hardcoded Secrets in Configuration"
+    description: "Potential hardcoded secrets (passwords, keys) found in variables or resources."
+    type: "key"
+    key: "*.*.*.*"
+    condition: "exists"
+    severity: "High"
+    remediation: "Never hardcode secrets in Terraform configuration files. Use variables with sensitive marking, environment variables, or integrate with a secrets management system like AWS Secrets Manager or HashiCorp Vault."
+    reference: "https://developer.hashicorp.com/terraform/tutorials/configuration-language/sensitive-variables"
+
+  # --- Regex-based rules for Terraform (checking raw .tf file content) ---
+  - id: "TF-REGEX-001"
+    name: "Hardcoded Secrets in .tf Files (Regex)"
+    description: "Potential hardcoded secrets detected using pattern matching."
+    type: "regex"
+    # Using a literal scalar (|) for the complex regex to prevent YAML parsing errors
+    regex: |
+      (["']?(password|secret|key)["']?\s*[=>]\s*["'][^"']{4,}["'])|(access_key\s*=\s*"[A-Z0-9]{20}")
+    severity: "High"
+    remediation: "Remove hardcoded secrets. Use variables, environment variables, or secret stores."
+    reference: "https://developer.hashicorp.com/terraform/tutorials/configuration-language/sensitive-variables"
