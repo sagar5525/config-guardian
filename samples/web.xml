@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee" version="4.0">
+
+  <!-- WEBXML-001: Directory listing enabled -->
+  <servlet>
+    <servlet-name>default</servlet-name>
+    <init-param>
+      <param-name>listings</param-name>
+      <param-value>true</param-value>
+    </init-param>
+  </servlet>
+
+  <!-- WEBXML-002: No session timeout -->
+  <!-- Missing: <session-config><session-timeout>15</session-timeout></session-config> -->
+
+  <!-- WEBXML-003: No custom error pages -->
+  <!-- Missing: <error-page>...</error-page> -->
+
+  <!-- WEBXML-004: No security constraints -->
+  <!-- Missing: <security-constraint> for /admin -->
+
+  <servlet-mapping>
+    <servlet-name>default</servlet-name>
+    <url-pattern>/</url-pattern>
+  </servlet-mapping>
+
+</web-app>
