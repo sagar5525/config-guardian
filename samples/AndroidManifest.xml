@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.vulnapp">
+
+    <!-- Permissions that trigger ANDROID-009 -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
+    <application
+        android:name=".MainApp"
+        android:allowBackup="true"
+        android:debuggable="true"
+        android:usesCleartextTraffic="true"
+        android:label="Vulnerable App"
+        android:theme="@style/AppTheme">
+
+        <!-- Main Activity: exported without permission -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Exported Activity without permission -->
+        <activity
+            android:name=".PublicActivity"
+            android:exported="true" />
+
+        <!-- Exported Service -->
+        <service
+            android:name=".BackgroundService"
+            android:exported="true" />
+
+        <!-- Exported Content Provider -->
+        <provider
+            android:name=".UserDataProvider"
+            android:authorities="com.example.vulnapp.provider"
+            android:exported="true" />
+
+        <!-- Exported Broadcast Receiver -->
+        <receiver
+            android:name=".SmsReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- WebView Activity (triggers ANDROID-007) -->
+        <activity android:name=".WebViewerActivity">
+            <meta-data
+                android:name="allowJs"
+                android:value="true" />
+        </activity>
+
+    </application>
+</manifest>
