@@ -1,0 +1,47 @@
+# rules/arm.yaml
+rules:
+  - id: "ARM-001"
+    name: "Storage Account Not Using HTTPS"
+    description: "Storage account does not enforce HTTPS traffic, allowing insecure connections."
+    type: "key"
+    # Path in ARM template JSON structure
+    key: "resources.*.properties.supportsHttpsTrafficOnly"
+    value: false # Default might be false
+    severity: "High"
+    remediation: "Set properties.supportsHttpsTrafficOnly to true in the Microsoft.Storage/storageAccounts resource definition."
+    reference: "https://learn.microsoft.com/en-us/azure/templates/microsoft.storage/storageaccounts?pivots=deployment-language-arm-template#storageaccountpropertiescreateparameters"
+
+  - id: "ARM-002"
+    name: "Key Vault Allows Azure Services Bypass"
+    description: "Key Vault network ACL allows bypass by Azure services, potentially widening access."
+    type: "key"
+    key: "resources.*.properties.networkAcls.bypass"
+    value: "AzureServices" # Or check if it's not 'None'
+    severity: "Medium"
+    remediation: "Set properties.networkAcls.bypass to 'None' and explicitly configure access rules if needed."
+    reference: "https://learn.microsoft.com/en-us/azure/templates/microsoft.keyvault/vaults?pivots=deployment-language-arm-template#vaultproperties"
+
+  - id: "ARM-003"
+    name: "Virtual Machine Admin Username is 'admin'"
+    description: "Using common administrator usernames like 'admin' increases the risk of brute-force attacks."
+    type: "key"
+    key: "resources.*.properties.osProfile.adminUsername"
+    value: "admin" # Case insensitive check might be needed
+    severity: "Medium"
+    remediation: "Use a unique, non-obvious administrator username."
+    reference: "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/quick-create-portal#review--create-virtual-machine"
+
+# --- Regex-based rules for ARM (checking raw file content) ---
+  - id: "ARM-REGEX-001"
+    name: "Hardcoded Secrets in ARM Files (Regex)"
+    description: "Potential hardcoded secrets detected using pattern matching in ARM template files."
+    type: "regex"
+    # Using a literal scalar (|) for the complex regex to prevent YAML parsing errors
+    # Original intended regex (simplified):
+    # (["']?(password|adminPassword|secret)["']?\s*:\s*["'][^"']{4,}["'])
+    # YAML Literal Block Scalar:
+    regex: |
+      (["']?(password|adminPassword|secret)["']?\s*:\s*["'][^"']{4,}["'])
+    severity: "High"
+    remediation: "Do not hardcode secrets in ARM templates. Use Azure Key Vault and reference secrets using `reference` function or deploy with parameters from a secure source."
+    reference: "https://learn.microsoft.com/en-us/azure/azure-resource-manager/templates/template-best-practices#security-recommendations-for-parameters"
