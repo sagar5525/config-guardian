@@ -1,0 +1,24 @@
+# samples/cloudformation.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Sample CFN template with issues'
+Parameters:
+  AdminPassword:
+    Type: String
+    Default: mysecretpassword123 # Violates CFN-REGEX-001
+    NoEcho: true
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead # Violates CFN-001
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow all
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0 # Violates CFN-002
