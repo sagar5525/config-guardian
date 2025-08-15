@@ -1,0 +1,5 @@
+lxml
+PyYAML
+Jinja2
+click
+weasyprint ; extra == "pdf"  # Optional: for PDF export
