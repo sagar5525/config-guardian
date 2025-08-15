@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  web:
+    image: nginx:alpine
+    privileged: true
+    network_mode: host
+    pid: host
+    user: root
+    cap_add:
+      - SYS_ADMIN
+    restart: always
+    mem_limit: 512m
+    volumes:
+      - ./app:/var/www/html
+      - /var/run/docker.sock:/var/run/docker.sock  # Critical!
+      - ./logs:/app/logs:rw
+    environment:
+      - API_KEY=secret123
+      - DB_PASSWORD=passw0rd
+    ports:
+      - "80:80"
